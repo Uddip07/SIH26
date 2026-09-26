@@ -80,3 +80,4 @@ datasets/**/.cache/
 # External hazard sources and built products live on Hugging Face (ext_raw/, ext_products/)
 datasets/ext/
 datasets/ext_products/
+datasets/_archives/

@@ -5,6 +5,7 @@ in the layout scripts/build_authentic_dataset.py, scripts/build_ext_products.py 
     python scripts/fetch_hf_datasets.py                 # flat files (except the 9.2 GB model) + ext_products/
     python scripts/fetch_hf_datasets.py --with-model    # also INCOIS-BIO-ROMS.nc
     python scripts/fetch_hf_datasets.py --with-ext-raw  # also the external source subsets (ext_raw/ -> datasets/ext/)
+    python scripts/fetch_hf_datasets.py --with-raw      # also the raw Argo data-centre archives (raw/*.tar, ~16 GB)
     python scripts/fetch_hf_datasets.py --only cmems.nc ext_products/mhw_daily.nc
 
 The data-service does NOT need this to serve volumes or the Disaster Early Warning products: without a
@@ -28,6 +29,10 @@ def destination(name: str) -> str:
     """Map the HF repo layout onto datasets/."""
     if name.startswith("ext_products/"):
         return os.path.join(DATASETS, "ext_products", name.split("/", 1)[1])
+    if name.startswith("raw/"):
+        return os.path.join(DATASETS, "_archives", name.split("/", 1)[1])
+    if name.startswith("incois_roms_"):
+        return os.path.join(DATASETS, "model", name)
     if name.startswith("ext_raw/"):
         return os.path.join(DATASETS, "ext", *name.split("/")[1:])
     if name == MODEL_FILE:
@@ -45,6 +50,7 @@ def main():
     ap.add_argument("--revision", default=os.getenv("HF_DATASET_REVISION", "main"))
     ap.add_argument("--with-model", action="store_true", help=f"also download {MODEL_FILE} (9.2 GB)")
     ap.add_argument("--with-ext-raw", action="store_true", help="also download ext_raw/ (external source subsets)")
+    ap.add_argument("--with-raw", action="store_true", help="also download + unpack raw/argo_<centre>.tar")
     ap.add_argument("--only", nargs="*", help="download just these repo paths")
     ap.add_argument("--force", action="store_true", help="re-download files that already exist locally")
     args = ap.parse_args()
@@ -64,6 +70,9 @@ def main():
                 keep.append(f)
             elif f.startswith("ext_raw/"):
                 if args.with_ext_raw:
+                    keep.append(f)
+            elif f.startswith("raw/"):
+                if args.with_raw:
                     keep.append(f)
             elif "/" not in f and (args.with_model or f != MODEL_FILE):
                 keep.append(f)
@@ -86,6 +95,11 @@ def main():
             path = hf_hub_download(args.repo, name, repo_type="dataset", revision=args.revision, token=token)
             shutil.copyfile(path, dest)
         print(f"  -> {os.path.relpath(dest, REPO_ROOT)} ({os.path.getsize(dest):,} bytes)")
+        if name.startswith("raw/") and name.endswith(".tar"):
+            import tarfile
+            with tarfile.open(dest) as tar:  # archives hold one top-level folder: datasets/<centre>/
+                tar.extractall(DATASETS, filter="data")
+            print(f"  unpacked into datasets/{os.path.basename(name)[5:-4]}/")
     print("done")
 
 
