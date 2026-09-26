@@ -131,7 +131,7 @@ def test_tile_endpoint_serves_real_tiles_and_refuses_everything_else():
 def test_analytics_endpoints():
     lat, lon = 15.0, 65.0
     ts = client.get("/api/analytics/timeseries", params={"variable": "temperature", "lat": lat, "lon": lon}).json()
-    assert ts["available"] and len(ts["timeseries_points"]) == 12
+    assert ts["available"] and len(ts["timeseries_points"]) == len(ae.timesteps("temperature")) >= 12
     an = client.get("/api/analytics/anomalies", params={"variable": "temperature", "lat": lat, "lon": lon}).json()
     assert an["available"] and an["date"] == ae.latest_timestep("temperature")
     co = client.get("/api/analytics/correlation", params={"lat": lat, "lon": lon}).json()
