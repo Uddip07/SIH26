@@ -63,6 +63,12 @@ India's vast Exclusive Economic Zone (EEZ) and coastline demand continuous, high
 | Point analytics | time series (OLS), spatial z-score, correlation | requires the API |
 | Water-column view (Three.js) | real surface field + nearest Argo profile | no subsurface gridded data exists |
 | WMS 1.3.0 / NetCDF export | catalogued tiles | exact subsets, real time/depth |
+| Marine heatwaves (daily) + coral DHW | NOAA OISST v2.1, 1982–present | Hobday (2016) ≥5-day events, 1991–2020 baseline; CRW DHW |
+| Marine heatwaves (monthly) + chlorophyll bloom | IBR 1980–2019 | 1990–2019 baseline and a detrended variant; HAB screening |
+| Cyclone heat potential, GPI, eddy convergence | HYCOM 3-D temperature / currents, NCEP R1, OISST | indicators, not forecasts |
+| Cyclone tracks + validation | IBTrACS v04r01 | layers checked at genesis points |
+| Drift projection (spill / SAR) | HYCOM currents (3-hourly) + GFS wind | ensemble cone; assumptions labelled; skill vs GDP drifters |
+| Advisory export | all hazard layers | GeoJSON and CAP 1.2 XML |
 
 Depth slicing below the surface shows no gridded data by design: the available model and
 analysis products are surface-only, and subsurface values are never interpolated or invented.
@@ -212,6 +218,17 @@ cp .env.example .env
 pip install -r scripts/requirements-build.txt
 python scripts/build_authentic_dataset.py --ibr-year 2019
 ```
+
+### Disaster Early Warning products (external public datasets, no login)
+```bash
+python scripts/fetch_hf_datasets.py --with-ext-raw      # or: python scripts/download_external.py all
+python scripts/build_ext_products.py all                 # -> datasets/ext_products + static copies
+HF_TOKEN=... python scripts/upload_to_hf.py --ext-products --ext-raw
+python scripts/nrt_update.py --upload                    # daily refresh (also .github/workflows/nrt-ingest.yml)
+```
+The data-service downloads `ext_products/*` from the Hugging Face dataset repo on first use and
+re-checks it every `EXT_PRODUCTS_REFRESH_HOURS` (default 6). The daily GitHub Action needs the
+repository secret `HF_TOKEN` to publish.
 
 ### Option 1: Docker
 ```bash
